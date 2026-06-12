@@ -1,7 +1,10 @@
 [project]
-name = "predictor"
+name = "world_cup_predictor"
 version = "0.1.0"
-description = "Add your description here"
+description = "A simple World Cup match score predictor based on an Elo model"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "pandas",
+    "scipy",
+]

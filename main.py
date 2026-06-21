@@ -1,8 +1,12 @@
 import argparse
 
 import pandas as pd
+
 from scipy.stats import poisson
 from scipy.optimize import brentq
+
+from rich.console import Console
+from rich.table import Table
 
 
 def top_scores(xg_home, xg_away, max_goals=10, top_n=6):
@@ -80,29 +84,42 @@ def main():
         dest="lambdas"
     )
 
-    parser.add_argument("team_a")
-    parser.add_argument("team_b")
+    parser.add_argument("team_a", type=str)
+    parser.add_argument("team_b", type=str)
 
     args = parser.parse_args()
 
     if args.lambdas == True:
         lambda_a = float(args.team_a)
         lambda_b = float(args.team_b)
+        team_a_name = "Team A"
+        team_b_name = "Team B"
     else:
         elo_df = pd.read_csv("data/elo_fifa.csv")
         elo_dict = dict(zip(elo_df["fifa_code"], elo_df["elo"]))
-
         elo_a = elo_dict[args.team_a]
         elo_b = elo_dict[args.team_b]
-
         p_elo = elo_win_probability(elo_a, elo_b)
-
         lambda_a, lambda_b = find_lambdas(target_p=p_elo,)
+
+        team_a_name = args.team_a
+        team_b_name = args.team_b
+
+    table = Table(title="Predictions")
+    table.add_column(team_a_name)
+    table.add_column(team_b_name)
+    table.add_column("Relative Freq")
+    table.add_column("Cumulative Freq")
 
     top = top_scores(lambda_a, lambda_b)
 
+    acc = 0
     for h, a, p in top:
-        print(f"{h}-{a}: {100*p:.2f}%")
+        acc += p
+        table.add_row(str(h), str(a), f"{100*p:.2f}%", f"{100*acc:.2f}%")
+
+    console = Console()
+    console.print(table)
 
 if __name__ == "__main__":
     main()

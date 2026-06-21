@@ -74,20 +74,30 @@ def find_lambdas(target_p, total_goals=2.6):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("fifac_a", type=str)
-    parser.add_argument("fifac_b", type=str)
+    parser.add_argument(
+        "--lambdas",
+        action="store_true",
+        dest="lambdas"
+    )
+
+    parser.add_argument("team_a")
+    parser.add_argument("team_b")
 
     args = parser.parse_args()
 
-    elo_df = pd.read_csv("data/elo_fifa.csv")
-    elo_dict = dict(zip(elo_df["fifa_code"], elo_df["elo"]))
+    if args.lambdas == True:
+        lambda_a = float(args.team_a)
+        lambda_b = float(args.team_b)
+    else:
+        elo_df = pd.read_csv("data/elo_fifa.csv")
+        elo_dict = dict(zip(elo_df["fifa_code"], elo_df["elo"]))
 
-    elo_a = elo_dict[args.fifac_a]
-    elo_b = elo_dict[args.fifac_b]
+        elo_a = elo_dict[args.team_a]
+        elo_b = elo_dict[args.team_b]
 
-    p_elo = elo_win_probability(elo_a, elo_b)
+        p_elo = elo_win_probability(elo_a, elo_b)
 
-    lambda_a, lambda_b = find_lambdas(target_p=p_elo,)
+        lambda_a, lambda_b = find_lambdas(target_p=p_elo,)
 
     top = top_scores(lambda_a, lambda_b)
 

@@ -1,4 +1,5 @@
 import argparse
+from heapq import nlargest
 
 import pandas as pd
 
@@ -9,26 +10,62 @@ from rich.console import Console
 from rich.table import Table
 
 
-def top_scores(xg_home, xg_away, max_goals=10, top_n=6):
+def dixon_coles_tau(home_goals, away_goals, lambda_home, lambda_away, rho):
     """
-    Calculate the most probable outcomes
+    Dixon-Coles correction factor.
     """
+    if home_goals == 0 and away_goals == 0:
+        return 1 - lambda_home * lambda_away * rho
+    elif home_goals == 0 and away_goals == 1:
+        return 1 + lambda_home * rho
+    elif home_goals == 1 and away_goals == 0:
+        return 1 + lambda_away * rho
+    elif home_goals == 1 and away_goals == 1:
+        return 1 - rho
+    return 1.0
+
+
+def top_scores(
+    xg_home,
+    xg_away,
+    rho=-0.10,
+    max_goals=10,
+    top_n=20,
+):
+    """
+    Most likely scorelines using the Dixon-Coles model.
+    """
+
+    home_probs = [
+        poisson.pmf(i, xg_home)
+        for i in range(max_goals + 1)
+    ]
+
+    away_probs = [
+        poisson.pmf(i, xg_away)
+        for i in range(max_goals + 1)
+    ]
+
     results = []
-    for home_goals in range(max_goals + 1):
-        for away_goals in range(max_goals + 1):
+
+    for h in range(max_goals + 1):
+        for a in range(max_goals + 1):
 
             prob = (
-                poisson.pmf(home_goals, xg_home)
-                * poisson.pmf(away_goals, xg_away)
+                home_probs[h]
+                * away_probs[a]
+                * dixon_coles_tau(
+                    h,
+                    a,
+                    xg_home,
+                    xg_away,
+                    rho,
+                )
             )
 
-            results.append(
-                (home_goals, away_goals, prob)
-            )
+            results.append((h, a, prob))
 
-    results.sort(key=lambda x: x[2], reverse=True)
-
-    return results[:top_n]
+    return nlargest(top_n, results, key=lambda x: x[2])
 
 
 def elo_win_probability(elo_a, elo_b):
@@ -54,7 +91,7 @@ def poisson_win_probability(lambda_a, lambda_b, max_goals=10):
     return p
 
 
-def find_lambdas(target_p, total_goals=2.6):
+def find_lambdas(target_p, total_goals=3):
     """
     Find parameters for the Posisson distributions
     """
@@ -106,6 +143,7 @@ def main():
         team_b_name = args.team_b
 
     table = Table(title="Predictions")
+    table.add_column("Top")
     table.add_column(team_a_name)
     table.add_column(team_b_name)
     table.add_column("Relative Freq")
@@ -114,9 +152,11 @@ def main():
     top = top_scores(lambda_a, lambda_b)
 
     acc = 0
+    i = 0
     for h, a, p in top:
         acc += p
-        table.add_row(str(h), str(a), f"{100*p:.2f}%", f"{100*acc:.2f}%")
+        i += 1
+        table.add_row(str(i), str(h), str(a), f"{100*p:.2f}%", f"{100*acc:.2f}%")
 
     console = Console()
     console.print(table)

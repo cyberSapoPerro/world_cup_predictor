@@ -120,6 +120,12 @@ def main():
         action="store_true",
         dest="lambdas"
     )
+    
+    parser.add_argument(
+            "-p",
+            "--prob",
+            default=None,
+            )
 
     parser.add_argument("team_a", type=str)
     parser.add_argument("team_b", type=str)
@@ -129,6 +135,11 @@ def main():
     if args.lambdas == True:
         lambda_a = float(args.team_a)
         lambda_b = float(args.team_b)
+        team_a_name = "Team A"
+        team_b_name = "Team B"
+    elif args.prob:
+        p = float(args.prob)
+        lambda_a, lambda_b = find_lambdas(target_p=p)
         team_a_name = "Team A"
         team_b_name = "Team B"
     else:
